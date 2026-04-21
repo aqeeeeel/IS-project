@@ -1,0 +1,45 @@
+sequenceDiagram
+    autonumber
+    participant Device
+    participant Server
+    participant DB as DeviceRecordDB
+    participant Audit
+
+    Device->>Server: RegistrationRequest(CRPs, policy params)
+    Server->>Server: Train surrogate + tune threshold
+    Server->>DB: Store identity tag, model params, policies
+    Server->>Audit: registration.enroll(ok)
+    Server-->>Device: RegistrationResult(identity_tag, matrix_set)
+
+    Device->>Server: Auth request(device_id)
+    Server->>DB: Load record + enforce lockout/query limits
+    Server->>Server: Build signed challenge
+    Server->>Audit: auth.issue_challenge(ok/fail)
+    Server-->>Device: AuthenticationChallenge(server_message)
+
+    Device->>Device: Verify challenge authenticity/freshness
+    Device->>Device: Derive PUF response bits
+    Device->>Device: Matrix encrypt response
+    Device-->>Server: AuthenticationReply(device_message)
+
+    Server->>Server: Verify reply MAC + nonce freshness
+    Server->>Server: Decrypt response bits
+    Server->>Server: Optional ECC/fuzzy recovery
+    Server->>Server: Compare hamming ratio vs threshold
+
+    alt Authentication success
+        Server->>Server: Derive PUF session key
+        Server->>DB: Update authenticated state
+        Server->>Audit: auth.verify_reply(ok)
+        Server-->>Device: AuthenticationResult(success, session_key ref)
+    else Authentication failure
+        Server->>DB: Increment failed attempts / set lockout
+        Server->>Audit: auth.verify_reply(fail)
+        Server-->>Device: AuthenticationResult(fail, reason)
+    end
+
+    opt Large payload hybrid mode
+        Server->>Server: Derive key via PUF challenge set
+        Server-->>Device: AES-GCM payload + key challenges
+        Device->>Device: Re-derive key + decrypt payload
+    end

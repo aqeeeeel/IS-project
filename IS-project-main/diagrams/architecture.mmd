@@ -1,0 +1,51 @@
+flowchart LR
+    subgraph DeviceSide[Device Side]
+        DAgent[DeviceAgent]
+        DPuf[PUFEngine / Simulator]
+        DProv[Provisioning Store]
+    end
+
+    subgraph ServerSide[Server Side]
+        SApp[ProtectionServer]
+        SReg[RegistrationService]
+        SAuth[AuthenticationService]
+        SDB[(DeviceRecordDatabase)]
+        SAudit[(AuditLogger)]
+    end
+
+    subgraph Protocol[Protocol + Crypto]
+        Auth[Authentication Messages]
+        Tx[Parameter Transmission]
+        Crypto[HMAC / Matrix Cipher / AES-GCM]
+        Fuzzy[Fuzzy + ECC Recovery]
+    end
+
+    subgraph Modeling[Modeling]
+        Pipe[Training Pipeline]
+        LR[Logistic Regression Surrogate]
+        Bench[Attack Benchmarks]
+    end
+
+    DAgent --> DPuf
+    DAgent --> DProv
+    DAgent <--> Auth
+
+    SApp --> SReg
+    SApp --> SAuth
+    SReg --> SDB
+    SAuth --> SDB
+    SReg --> SAudit
+    SAuth --> SAudit
+
+    SReg --> Pipe
+    Pipe --> LR
+    SAuth --> LR
+
+    Auth --> Crypto
+    Auth --> Fuzzy
+    Tx --> Crypto
+    Tx <--> DAgent
+    Tx <--> SApp
+
+    Bench --> SApp
+    Bench --> DAgent

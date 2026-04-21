@@ -1,0 +1,26 @@
+services:
+  puf-server-sim:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: server-sim
+    container_name: puf-server-sim
+
+  puf-device-sim:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: device-sim
+    container_name: puf-device-sim
+    depends_on:
+      - puf-server-sim
+
+  puf-tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: test-runner
+    container_name: puf-tests
+    depends_on:
+      - puf-server-sim
+      - puf-device-sim
